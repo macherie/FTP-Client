@@ -1,0 +1,1 @@
+int getFTPcommand(char *s);
