@@ -2,9 +2,6 @@
 #include <string.h>
 #include "ftpParser.h"
 
-const char *commands[] = {"USER", "PASS", "QUIT", "MODE", "TYPE", "RETR", "STOR", "NOOP"};
-const int command_len = 8;
-
 static int checkFTPcommand(char *command);
 
 int getFTPcommand(char *s)
