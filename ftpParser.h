@@ -1,5 +1,4 @@
-const char *commands[] = {"USER", "PASS", "QUIT", "MODE", "TYPE", "RETR", "STOR", "NOOP"};
-const int command_len = 8;
+#define FTP_COMMANDS_LEN 8
+extern const char *commands[FTP_COMMANDS_LEN];
 
 int getFTPcommand(char *s);
-int chooseFTPcommand(char *command);
