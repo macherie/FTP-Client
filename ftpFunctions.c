@@ -11,3 +11,8 @@ int pass(int sockfd, char *parameter)
 {
   printf("pass");
 }
+
+int pasv(int sockfd)
+{
+  printf("pasv");
+}

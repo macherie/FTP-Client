@@ -101,9 +101,13 @@ int main(int argc, char *argv[])
 	}
 	
       buf[numbytes] = '\0';
-      
-      printf("%s \n", buf);
-    }
+
+      if (parseFTPresponse(buf) != 0)
+	{
+	  perror("Parse error!");
+	}
+      printf("%s", buf);
+     }
 
   
   close(sockfd);
