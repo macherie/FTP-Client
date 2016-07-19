@@ -14,14 +14,14 @@
 #define MAXDATASIZE 256
 
 void *get_in_addr(struct sockaddr *sa);
+int connect_list(struct addrinfo *server_info, int *sock);
 
 int main(int argc, char *argv[])
 {
-  int sockfd, numbytes;
+  int command_socket, numbytes;
   char buf[MAXDATASIZE];
-  struct addrinfo hints, *servinfo, *p;
+  struct addrinfo hints, *server_info;
   int rv;
-  char s[INET6_ADDRSTRLEN];
 
   if (argc != 2)
     {
@@ -33,43 +33,19 @@ int main(int argc, char *argv[])
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  if ((rv = getaddrinfo(argv[1], FTP_PORT, &hints, &servinfo)) != 0)
+  if ((rv = getaddrinfo(argv[1], FTP_PORT, &hints, &server_info)) != 0)
     {
       fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
       return 1;
     }
 
-  // loop trough all resulst and connect to the first one that we can
-  for (p = servinfo; p != NULL; p = p->ai_next)
-    {
-      if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-	{
-	  perror("client: socket");
-	  continue;
-	}
-
-      if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-	{
-	  close(sockfd);
-	  perror("client: connect");
-	  continue;
-	}
-
-      break;
-    }
-
-  if (p == NULL)
+  if (connect_list(server_info, &command_socket) != 0)
     {
       fprintf(stderr, "client: failed to connect\n");
-      return 2;
+      return 1;
     }
 
-  inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof(s));
-  printf("ftpclient: connecting to %s\n", s);
-
-  freeaddrinfo(servinfo);
-
-  if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1)
+  if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
     {
       perror("recv");
       exit(1);
@@ -80,6 +56,8 @@ int main(int argc, char *argv[])
 
 
   char command[100];
+  struct sockaddr_in *data_connection_info;
+  int data_socket;
   // display prompt for ftp commands
   for (;;)
     {
@@ -89,12 +67,12 @@ int main(int argc, char *argv[])
 	  continue;
 	}
 
-      if (send(sockfd, command, strlen(command), 0) == -1)
+      if (send(command_socket, command, strlen(command), 0) == -1)
 	{
 	  perror("send");
 	}
 
-      if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1)
+      if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
 	{
 	  perror("recv");
 	  exit(1);
@@ -102,15 +80,21 @@ int main(int argc, char *argv[])
 	
       buf[numbytes] = '\0';
 
-      if (parseFTPresponse(buf) != 0)
+      int response_code = getFTPresponse_code(buf);
+      if (response_code == 227)
 	{
-	  perror("Parse error!");
+	  data_connection_info = (struct sockaddr_in *) malloc(sizeof data_connection_info);
+	  parsePASVresponse(buf, data_connection_info);
+	  printf("IP address: %d and port: %d.\n",
+		 data_connection_info->sin_addr.s_addr,
+		 data_connection_info->sin_port); 
 	}
+      
       printf("%s", buf);
      }
 
   
-  close(sockfd);
+  close(command_socket);
 
   return 0;
     
@@ -126,5 +110,39 @@ void *get_in_addr(struct sockaddr *sa)
   return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+int connect_list(struct addrinfo *server_info, int *sock)
+{
+  struct addrinfo *p;
+  char s[INET6_ADDRSTRLEN];
+  
+  // loop trough all resulst and connect to the first one that we can
+  for (p = server_info; p != NULL; p = p->ai_next)
+    {
+      if ((*sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+	{
+	  perror("client: socket");
+	  continue;
+	}
+
+      if (connect(*sock, p->ai_addr, p->ai_addrlen) == -1)
+	{
+	  close(*sock);
+	  perror("client: connect");
+	  continue;
+	}
+
+      break;
+    }
+
+  if (p == NULL)
+    {
+      return 2;
+    }
+
+  inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof(s));
+  printf("ftpclient: connecting to %s\n", s);
+  freeaddrinfo(server_info);
+  return 0;
+}
 
 

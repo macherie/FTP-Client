@@ -32,22 +32,12 @@ int getFTPcommand(char *s)
   return 0;
 }
 
-int parseFTPresponse(char *response)
+int getFTPresponse_code(char *response)
 {
   int code;
   if ((sscanf(response, "%d", &code)) == 1)
     {
-      printf("Server response code: %d\n", code);
-      if (code == 227) // When server responds with 227 it means that it's entering passive mode
-	{
-	  struct sockaddr_in *data_connection_info;
-	  data_connection_info = (struct sockaddr_in *) (malloc(sizeof data_connection_info));
-	  parsePASVresponse(response, data_connection_info);
-	  printf("IP address: %d and port: %d.\n",
-		 data_connection_info->sin_addr.s_addr,
-		 data_connection_info->sin_port);
-	}
-      return 0;
+      return code;
     }
   return -1;
 }
