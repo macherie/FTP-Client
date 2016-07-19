@@ -49,11 +49,10 @@ int parsePASVresponse(char *response, struct sockaddr_in *result)
   
   if ((response = strstr(response, "(")) != NULL)
     {
-      printf("%s\n", response);
       if ((sscanf(response, "(%d,%d,%d,%d,%d,%d)", &ip1, &ip2, &ip3, &ip4, &p1, &p2)) == 6)
 	{
 	  result->sin_family = AF_INET;
-	  result->sin_port = (p1 * 256) + p2;
+	  result->sin_port = htons((p1 % 256) * 256 + (p2 % 256));
 	  int dot1, dot2, dot3;
 	  
 	  // construct the IP address
@@ -68,7 +67,7 @@ int parsePASVresponse(char *response, struct sockaddr_in *result)
 	  ip_addr[dot3] = '.';
 	  sprintf(&ip_addr[dot3 + 1], "%d", ip4);
 
-	  inet_pton(AF_INET, ip_addr, &(result->sin_addr));
+	  result->sin_addr.s_addr = inet_addr(ip_addr); 
 	  return 0;
 	}
     }

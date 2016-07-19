@@ -56,8 +56,6 @@ int main(int argc, char *argv[])
 
 
   char command[100];
-  struct sockaddr_in *data_connection_info;
-  int data_socket;
   // display prompt for ftp commands
   for (;;)
     {
@@ -81,13 +79,32 @@ int main(int argc, char *argv[])
       buf[numbytes] = '\0';
 
       int response_code = getFTPresponse_code(buf);
-      if (response_code == 227)
+      if (response_code == 227) // 227 means that the server is entering passive mode
 	{
-	  data_connection_info = (struct sockaddr_in *) malloc(sizeof data_connection_info);
-	  parsePASVresponse(buf, data_connection_info);
-	  printf("IP address: %d and port: %d.\n",
-		 data_connection_info->sin_addr.s_addr,
-		 data_connection_info->sin_port); 
+	  struct sockaddr_in data_connection_info; 
+	  if (parsePASVresponse(buf, &data_connection_info) == -1)
+	    {
+	      perror("parse error after PASV command!");
+	      exit(3);
+	    }
+
+	  int data_socket;
+
+	  if ((data_socket = socket(AF_INET, SOCK_STREAM, 0)) == 1)
+	    {
+	      perror("could not create socket for data..");
+	      exit(3);
+	    }
+
+	  if ((connect(data_socket, (struct sockaddr *)&data_connection_info,
+		       sizeof data_connection_info)) == -1)
+	    {
+	      close(data_socket);
+	      perror("could not open data connection..");
+	      exit(3);
+	    }
+
+	  printf("Data port open on port: %d\n", ntohs(data_connection_info.sin_port));
 	}
       
       printf("%s", buf);
