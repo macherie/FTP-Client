@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "ftpParser.h"
+#include "ftpFunctions.h"
 
 #define FTP_PORT "21" // port used for ftp connection
 #define MAXDATASIZE 256
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
 
 
   char command[100];
+  int data_socket;
   // display prompt for ftp commands
   for (;;)
     {
@@ -70,10 +72,16 @@ int main(int argc, char *argv[])
 	  perror("send");
 	}
 
-      if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
+      char cmd[6], file_name[95];
+      sscanf(command, "%s %s", cmd, file_name);
+      if (strcmp(cmd, "RETR") == 0) recv_all(data_socket, command_socket, file_name);
+      else
 	{
-	  perror("recv");
-	  exit(1);
+	  if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
+	    {
+	      perror("recv");
+	      exit(1);
+	    }
 	}
 	
       buf[numbytes] = '\0';
@@ -87,8 +95,6 @@ int main(int argc, char *argv[])
 	      perror("parse error after PASV command!");
 	      exit(3);
 	    }
-
-	  int data_socket;
 
 	  if ((data_socket = socket(AF_INET, SOCK_STREAM, 0)) == 1)
 	    {
@@ -106,9 +112,8 @@ int main(int argc, char *argv[])
 
 	  printf("Data port open on port: %d\n", ntohs(data_connection_info.sin_port));
 	}
-      
       printf("%s", buf);
-     }
+    }
 
   
   close(command_socket);
