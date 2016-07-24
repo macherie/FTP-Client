@@ -74,18 +74,23 @@ int main(int argc, char *argv[])
 
       char cmd[6], file_name[95];
       sscanf(command, "%s %s", cmd, file_name);
-      if (strcmp(cmd, "RETR") == 0) recv_all(data_socket, command_socket, file_name);
-      else
+      if (strcmp(cmd, "RETR") == 0)
 	{
-	  if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
-	    {
-	      perror("recv");
-	      exit(1);
-	    }
+	  recv_file(data_socket, command_socket, file_name);
 	}
-	
-      buf[numbytes] = '\0';
+      else if (strcmp(cmd, "STOR") == 0)
+	{
+	  send_file(data_socket, command_socket, file_name);
+	  printf("trest\n");
+	}
 
+      if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
+	{
+	  perror("recv");
+	  exit(1);
+	}
+      buf[numbytes] = '\0';
+	
       int response_code = getFTPresponse_code(buf);
       if (response_code == 227) // 227 means that the server is entering passive mode
 	{

@@ -1,2 +1,3 @@
-int user(int sockfd, char *parameter);
-int pass(int sockfd, char *parameter);
+int recv_file(int data_socket, int command_socket, char *file_name);
+int send_file(int data_socket, int command_socket, char *file_name);
+
