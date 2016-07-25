@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <argp.h>
 #include "ftpParser.h"
 #include "ftpFunctions.h"
 
@@ -16,25 +17,51 @@
 
 void *get_in_addr(struct sockaddr *sa);
 int connect_list(struct addrinfo *server_info, int *sock);
+static error_t parse_opt (int key, char *arg, struct argp_state *state);
 
-int main(int argc, char *argv[])
+/* Version and email used fby argp */
+const char *FTP_client_version = "FTP client 0.2";
+const char *FTP_client_bug_address = "patricjgustafsson@outlook.com";
+
+/* Program documentation */
+static char doc[] = "FTP client - A client for use with FTP.";
+
+/* We accept these arguments */
+static char args_doc[] = "ARG1";
+
+/* All the options that the client provides */
+static struct argp_option options[] = {
+  {"anonymous", 'a', 0, 0, "Login as anonymous" },
+  { 0 }
+};
+
+/* Used by main to communicate with parse_opt */
+struct arguments
+{
+  char *args[1];
+  int anonymous;
+};
+
+/* Argp parser */
+static struct argp argp = { options, parse_opt, args_doc, doc };
+
+int main(int argc, char **argv)
 {
   int command_socket, numbytes;
   char buf[MAXDATASIZE];
   struct addrinfo hints, *server_info;
   int rv;
-
-  if (argc != 2)
-    {
-      fprintf(stderr, "usage: ftpclient hostname\n");
-      exit(1);
-    }
+  struct arguments arguments;
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
 
-  if ((rv = getaddrinfo(argv[1], FTP_PORT, &hints, &server_info)) != 0)
+  /* Default values for command line arguments */
+  arguments.anonymous = 0;
+  argp_parse (&argp, argc, argv, 0, 0, &arguments);
+
+  if ((rv = getaddrinfo(arguments.args[0], FTP_PORT, &hints, &server_info)) != 0)
     {
       fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
       return 1;
@@ -169,6 +196,33 @@ int connect_list(struct addrinfo *server_info, int *sock)
   inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof(s));
   printf("ftpclient: connecting to %s\n", s);
   freeaddrinfo(server_info);
+  return 0;
+}
+
+static error_t parse_opt (int key, char *arg, struct argp_state *state)
+{
+  struct arguments *arguments = state->input;
+
+  switch (key)
+    {
+    case 'a':
+      arguments->anonymous = 1;
+      break;
+    case ARGP_KEY_ARG:
+      if (state->arg_num >= 2)
+	argp_usage(state);
+
+      arguments->args[state->arg_num] = arg;
+      break;
+
+    case ARGP_KEY_END:
+      if (state->arg_num < 1)
+	argp_usage(state);
+      break;
+
+    default:
+      return ARGP_ERR_UNKNOWN;
+    }
   return 0;
 }
 
