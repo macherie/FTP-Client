@@ -2,7 +2,7 @@
 #include <string.h>
 #include "ftpParser.h"
 
-#define DATA_SIZE 256
+const int DATA_SIZE = 256;
 
 int recv_file(int data_socket, int command_socket, char *file_name)
 {
@@ -92,4 +92,68 @@ int send_file(int data_socket, int command_socket, char *file_name)
     }
   
   return 0;
+}
+
+int login(int command_socket, char *username, char *password)
+{
+  char user[260] = "USER ";
+  char pass[260] = "PASS ";
+  int len = 0;
+  
+  if (username == NULL)
+    {
+      strcat(user, "anonymous\n");
+    }
+  else
+    {
+      strncat(user, username, 254);
+      user[strlen(user)] = '\n'; /* Add newline because the server expects it */
+    }
+
+  if (password == NULL)
+    {
+      strcat(pass, "anonymous@mail.com\n");
+    }
+  else
+    {
+      strncat(pass, password, 254);
+      pass[strlen(user)] = '\n';
+    }
+
+  printf("%s%s\n", user, pass);
+  
+  char buf[DATA_SIZE];
+  int bytes = 0;
+
+  if (send(command_socket, user, strlen(user), 0) == -1)
+    {
+      perror("send");
+      return 0;
+    }
+
+  if ((bytes = recv(command_socket, buf, DATA_SIZE - 1, 0)) == -1)
+    {
+      perror("recv");
+      return 0;
+    }
+
+  buf[bytes] = '\0';
+  printf("%s\n", buf);
+
+  if (send(command_socket, pass, strlen(pass), 0) == -1)
+    {
+      perror("send");
+      return 0;
+    }
+
+  if ((bytes = recv(command_socket, buf, DATA_SIZE - 1, 0)) == -1)
+    {
+      perror("recv");
+      return 0;
+    }
+
+  buf[bytes] = '\0';
+  printf("%s\n", buf);
+
+  return 1;
 }

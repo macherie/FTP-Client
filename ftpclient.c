@@ -61,12 +61,14 @@ int main(int argc, char **argv)
   arguments.anonymous = 0;
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
 
+  /* Try to get info from server */
   if ((rv = getaddrinfo(arguments.args[0], FTP_PORT, &hints, &server_info)) != 0)
     {
       fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
       return 1;
     }
 
+  /* Go trough the linked list of nodes and connect to first one that is available */
   if (connect_list(server_info, &command_socket) != 0)
     {
       fprintf(stderr, "client: failed to connect\n");
@@ -82,7 +84,34 @@ int main(int argc, char **argv)
   buf[numbytes] = '\0';
   printf("client recieved %s \n", buf);
 
+  /* Do anonymous login if argument is there, otherwise prompt user for username and password */
+  if (arguments.anonymous)
+    {
+      if (!login(command_socket, NULL, NULL))
+	{
+	  printf("Anonymous login failed.\n");
+	  exit(1);
+	}
+    }
+  else
+    {
+      /* Get the password and username
+       The username and password have a arbitrarily chosen length of 256*/
+      char username[256];
+      char password[256];
 
+      printf("username: ");
+      scanf("%254s", username);
+      printf("password: ");
+      scanf("%*s %254s", password);
+
+      if (!login(command_socket, username, password))
+	{
+	  printf("Login failed.\n");
+	  exit(1);
+	}
+    }
+  
   char command[100];
   int data_socket;
   // display prompt for ftp commands
