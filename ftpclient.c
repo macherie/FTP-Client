@@ -101,9 +101,9 @@ int main(int argc, char **argv)
       char password[256];
 
       printf("username: ");
-      scanf("%254s", username);
+      fgets(username, 255, stdin);
       printf("password: ");
-      scanf("%*s %254s", password);
+      fgets(password, 255, stdin);
 
       if (!login(command_socket, username, password))
 	{
