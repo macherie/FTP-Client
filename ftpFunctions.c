@@ -1,10 +1,19 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
 #include <string.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include "ftpParser.h"
+#include "ftpFunctions.h"
 
 const int DATA_SIZE = 256;
-
-int recv_file(int data_socket, int command_socket, char *file_name)
+  
+int push(int data_socket, int command_socket, char *file_name)
 {
   printf("Recv all\n");
   int bytes = 0;
@@ -24,7 +33,7 @@ int recv_file(int data_socket, int command_socket, char *file_name)
   return 0;
 }
 
-int send_file(int data_socket, int command_socket, char *file_name)
+int fetch(int data_socket, int command_socket, char *file_name)
 {
   int bytes = 0;
   char buf[DATA_SIZE];
@@ -157,3 +166,66 @@ int login(int command_socket, char *username, char *password)
 
   return 1;
 }
+
+void quit()
+{
+  exit(0);
+}
+
+int pasv_request(int command_socket, int *data_socket)
+{
+  char message[] = "PASV\n";
+  char buf[DATA_SIZE];
+  int bytes = 0;
+  
+  if (send(command_socket, message, strlen(message), 0) == -1)
+    {
+      return -1;
+    }
+
+  if ((bytes = recv(command_socket, buf, DATA_SIZE - 1, 0)) == -1)
+    {
+      perror("recv");
+      return -1;
+    }
+
+  buf[bytes] = '\0';
+
+  // The server return the code 227 if it accept the PASV request
+  int response_code = getFTPresponse_code(buf);
+  if (response_code != 227)
+    {
+      return -1;
+    }
+
+  // Now ready to open the data socket
+  struct sockaddr_in data_connection_info; 
+  if (parsePASVresponse(buf, &data_connection_info) == -1)
+    {
+      perror("parse error after PASV command!");
+      exit(3);
+    }
+
+  if ((*data_socket = socket(AF_INET, SOCK_STREAM, 0)) == 1)
+    {
+      perror("could not create socket for data..");
+      exit(3);
+    }
+
+  if ((connect(*data_socket, (struct sockaddr *)&data_connection_info,
+	       sizeof data_connection_info)) == -1)
+    {
+      close(*data_socket);
+      perror("could not open data connection..");
+      exit(3);
+    }
+
+  printf("Data port open on port: %d\n", ntohs(data_connection_info.sin_port));
+
+  return 0;
+  
+}
+
+
+
+

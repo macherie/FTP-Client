@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
+#include <arpa/inet.h> 
 #include <argp.h>
 #include "ftpParser.h"
 #include "ftpFunctions.h"
@@ -117,66 +117,25 @@ int main(int argc, char **argv)
   // display prompt for ftp commands
   for (;;)
     {
-      if (getFTPcommand(command) == -1)
+      getFTPcommand(command);
+      int cmd_len = strlen(command);
+
+      if (cmd_len < 3)
 	{
-	  printf("Error in command!\n");
+	  printf("Command too short!");
 	  continue;
 	}
-
-      if (send(command_socket, command, strlen(command), 0) == -1)
+      else if (strncmp("login", command, cmd_len - 1) == 0)
 	{
-	  perror("send");
+	  login(command_socket, NULL, NULL);
 	}
-
-      char cmd[6], file_name[95];
-      sscanf(command, "%s %s", cmd, file_name);
-      if (strcmp(cmd, "RETR") == 0)
+      else if ((strncmp("fetch", command, cmd_len - 1) == 0) &&
+	       (pasv_request(command_socket, &data_socket)))
 	{
-	  recv_file(data_socket, command_socket, file_name);
+	  // We have data socket and are ready to transfer files
 	}
-      else if (strcmp(cmd, "STOR") == 0)
-	{
-	  send_file(data_socket, command_socket, file_name);
-	  printf("trest\n");
-	}
-
-      if ((numbytes = recv(command_socket, buf, MAXDATASIZE - 1, 0)) == -1)
-	{
-	  perror("recv");
-	  exit(1);
-	}
-      buf[numbytes] = '\0';
-	
-      int response_code = getFTPresponse_code(buf);
-      if (response_code == 227) // 227 means that the server is entering passive mode
-	{
-	  struct sockaddr_in data_connection_info; 
-	  if (parsePASVresponse(buf, &data_connection_info) == -1)
-	    {
-	      perror("parse error after PASV command!");
-	      exit(3);
-	    }
-
-	  if ((data_socket = socket(AF_INET, SOCK_STREAM, 0)) == 1)
-	    {
-	      perror("could not create socket for data..");
-	      exit(3);
-	    }
-
-	  if ((connect(data_socket, (struct sockaddr *)&data_connection_info,
-		       sizeof data_connection_info)) == -1)
-	    {
-	      close(data_socket);
-	      perror("could not open data connection..");
-	      exit(3);
-	    }
-
-	  printf("Data port open on port: %d\n", ntohs(data_connection_info.sin_port));
-	}
-      printf("%s", buf);
     }
 
-  
   close(command_socket);
 
   return 0;

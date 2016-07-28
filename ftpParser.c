@@ -1,10 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
 #include <string.h>
-#include "ftpParser.h"
-
-const char *commands[FTP_COMMANDS_LEN] = {"USER", "PASS", "QUIT", "PASV", "TYPE", "RETR", "STOR", "NOOP"};
-
-static int checkFTPcommand(char *command);
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h> 
 
 int getFTPcommand(char *s)
 {
@@ -20,14 +24,12 @@ int getFTPcommand(char *s)
   command = strsep(&running, " ");
   data = running;
 
-  if (checkFTPcommand(command) != 1)
-    {
-      return -1;
-    }
-
   strcat(s, command);
-  s[strlen(s)] = ' '; // add space between the commands
-  strcat(s, data);
+  if (data != NULL) /* More arguments to the command */
+    {
+      s[strlen(s)] = ' '; // add space between the commands
+      strcat(s, data);
+    }
   
   return 0;
 }
@@ -75,17 +77,4 @@ int parsePASVresponse(char *response, struct sockaddr_in *result)
     {
       return -1;
     }
-}
-
-static int checkFTPcommand(char *command)
-{
-  int ret = 0;
-  for (int i = 0; !ret && i < FTP_COMMANDS_LEN; i++)
-    {
-      if (strcmp(commands[i], command) == 0)
-	{
-     	  ret = 1;
-	}
-    }
-  return ret;
 }
