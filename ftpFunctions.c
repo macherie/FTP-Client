@@ -13,13 +13,32 @@
 
 const int DATA_SIZE = 256;
   
-int push(int data_socket, int command_socket, char *file_name)
+int fetch(int data_socket, int command_socket, char *file_name, int file_name_length)
 {
-  printf("Recv all\n");
   int bytes = 0;
   char buf[DATA_SIZE];
+  char message[256] = "RETR ";
+  strcat(message, file_name);
+  
+  int message_length = strlen(message);
+  message[message_length] = '\n';
+  message[message_length + 1] = '\0';
 
-  bytes = recv(command_socket, buf, DATA_SIZE - 1, 0);
+  printf("Message: %s\n", message);
+
+  /* Send the FTP command to the server */
+  if (send(command_socket, message, strlen(message), 0) == -1)
+    {
+      perror("Could not send data to server!");
+      return -1;
+    }
+
+  if ((bytes = recv(command_socket, buf, DATA_SIZE - 1, 0)) == -1)
+    {
+      perror("Could not recieve data from server!\n");
+      return -1;
+    }
+    
   buf[bytes] = '\0';
   printf("%s\n", buf);
   FILE *ptr;
@@ -29,11 +48,13 @@ int push(int data_socket, int command_socket, char *file_name)
     {
         fwrite(buf, sizeof buf, 1, ptr);
     }
+
+  close(data_socket);
   
   return 0;
 }
 
-int fetch(int data_socket, int command_socket, char *file_name)
+int push(int data_socket, int command_socket, char *file_name)
 {
   int bytes = 0;
   char buf[DATA_SIZE];
@@ -126,10 +147,8 @@ int login(int command_socket, char *username, char *password)
   else
     {
       strncat(pass, password, 254);
-      pass[strlen(user)] = '\n';
+      pass[strlen(password)] = '\n';
     }
-
-  printf("%s%s\n", user, pass);
   
   char buf[DATA_SIZE];
   int bytes = 0;
@@ -172,7 +191,7 @@ void quit()
   exit(0);
 }
 
-int pasv_request(int command_socket, int *data_socket)
+int pasv_request(int command_socket, char *pasv_response, int buffer_size)
 {
   char message[] = "PASV\n";
   char buf[DATA_SIZE];
@@ -180,6 +199,7 @@ int pasv_request(int command_socket, int *data_socket)
   
   if (send(command_socket, message, strlen(message), 0) == -1)
     {
+      perror("send");
       return -1;
     }
 
@@ -190,6 +210,7 @@ int pasv_request(int command_socket, int *data_socket)
     }
 
   buf[bytes] = '\0';
+  printf("%s\n", buf);
 
   // The server return the code 227 if it accept the PASV request
   int response_code = getFTPresponse_code(buf);
@@ -198,18 +219,25 @@ int pasv_request(int command_socket, int *data_socket)
       return -1;
     }
 
-  // Now ready to open the data socket
+  strncpy(pasv_response, buf, buffer_size);
+
+  return 1;
+}
+
+int open_data_port(int *data_socket, char *pasv_response)
+{
+
   struct sockaddr_in data_connection_info; 
-  if (parsePASVresponse(buf, &data_connection_info) == -1)
+  if (parsePASVresponse(pasv_response, &data_connection_info) == -1)
     {
       perror("parse error after PASV command!");
-      exit(3);
+      return -1;
     }
 
   if ((*data_socket = socket(AF_INET, SOCK_STREAM, 0)) == 1)
     {
       perror("could not create socket for data..");
-      exit(3);
+      return -1;
     }
 
   if ((connect(*data_socket, (struct sockaddr *)&data_connection_info,
@@ -217,13 +245,11 @@ int pasv_request(int command_socket, int *data_socket)
     {
       close(*data_socket);
       perror("could not open data connection..");
-      exit(3);
+      return -1;
     }
 
   printf("Data port open on port: %d\n", ntohs(data_connection_info.sin_port));
-
-  return 0;
-  
+  return 1;
 }
 
 

@@ -114,6 +114,7 @@ int main(int argc, char **argv)
   
   char command[100];
   int data_socket;
+  char pasv_buffer[100];
   // display prompt for ftp commands
   for (;;)
     {
@@ -125,14 +126,29 @@ int main(int argc, char **argv)
 	  printf("Command too short!");
 	  continue;
 	}
-      else if (strncmp("login", command, cmd_len - 1) == 0)
+      else if (strncmp("login", command, 5) == 0)
 	{
 	  login(command_socket, NULL, NULL);
 	}
-      else if ((strncmp("fetch", command, cmd_len - 1) == 0) &&
-	       (pasv_request(command_socket, &data_socket)))
+      else if (strncmp("fetch", command, 5) == 0)
 	{
-	  // We have data socket and are ready to transfer files
+	  char file_name[95];
+	  int file_name_given = (sscanf(command, "%*s %93s", file_name) == 1);
+
+	  if (!file_name_given)
+	    {
+	      printf("fetch requires a parameter!\n");
+	      continue;
+	    }
+	  
+	  int PASV_request_accepted = pasv_request(command_socket, pasv_buffer, sizeof pasv_buffer);
+	  int data_port_opened = open_data_port(&data_socket, pasv_buffer);
+	  
+	  if (PASV_request_accepted && data_port_opened)
+	    {
+	      fetch(data_socket, command_socket, file_name, strlen(file_name));
+	      // TODO, check for 226 as respone from server
+	    }
 	}
     }
 
