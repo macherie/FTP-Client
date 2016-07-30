@@ -191,6 +191,33 @@ void quit()
   exit(0);
 }
 
+int change_directory(int command_socket, char *path)
+{
+  char message[100] = "CWD ";
+  strcat(message, path);
+  int length = strlen(message);
+  message[length] = '\n';
+  message[length + 1] = '\0';
+
+  char buf[DATA_SIZE];
+  int bytes = 0;
+
+  if (send(command_socket, message, strlen(message), 0) == -1)
+    {
+      perror("Could not send CWD command to server!\n");
+      return -1;
+    }
+
+  int response_code;
+  if ((response_code = getFTPresponse_code(buf)) == 550)
+    {
+      printf("Server rejected CWD command!\n");
+      return -1;
+    }
+
+  return 0;
+}
+
 int pasv_request(int command_socket, char *pasv_response, int buffer_size)
 {
   char message[] = "PASV\n";

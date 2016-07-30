@@ -12,6 +12,10 @@ int push(int command_socket, int data_socket, char *file_name);
  server_response is used to store the port number */
 int pasv_request(int command_socket, char *server_response, int buffer_size);
 
+/* Send the CWD command to the server, 
+   the server will try to switch to that directory */
+int change_directory(int command_socket, char *path);
+
 /* Tries to open the data socket to the server */
 int open_data_port(int *data_socket, char *pasv_response);
 

@@ -114,7 +114,7 @@ int main(int argc, char **argv)
   
   char command[100];
   int data_socket;
-  char pasv_buffer[100];
+  char response_buffer[100];
   // display prompt for ftp commands
   for (;;)
     {
@@ -141,14 +141,27 @@ int main(int argc, char **argv)
 	      continue;
 	    }
 	  
-	  int PASV_request_accepted = pasv_request(command_socket, pasv_buffer, sizeof pasv_buffer);
-	  int data_port_opened = open_data_port(&data_socket, pasv_buffer);
+	  int PASV_request_accepted = pasv_request(command_socket, response_buffer, sizeof response_buffer);
+	  int data_port_opened = open_data_port(&data_socket, response_buffer);
 	  
 	  if (PASV_request_accepted && data_port_opened)
 	    {
 	      fetch(data_socket, command_socket, file_name, strlen(file_name));
 	      // TODO, check for 226 as respone from server
 	    }
+	}
+      else if (strncmp("cd", command, 2) == 0)
+	{
+	  char path[95];
+	  int directory_given = (sscanf(command, "%*s %93s", path) == 1);
+
+	  if (!directory_given)
+	    {
+	      printf("cd requires a parameter!\n");
+	      continue;
+	    }
+	  
+	  change_directory(command_socket, path);
 	}
     }
 
