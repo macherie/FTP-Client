@@ -240,9 +240,9 @@ int pasv_request(int command_socket, char *pasv_response, int buffer_size)
   printf("%s\n", buf);
 
   // The server return the code 227 if it accept the PASV request
-  int response_code = getFTPresponse_code(buf);
-  if (response_code != 227)
+  if (parse_response_code(getFTPresponse_code(buf)) != PASV_SUCCESS)
     {
+      printf("PASV request not accepted!\n");
       return -1;
     }
 

@@ -8,7 +8,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <arpa/inet.h> 
+#include <arpa/inet.h>
+#include "ftpParser.h"
 
 int getFTPcommand(char *s)
 {
@@ -73,8 +74,42 @@ int parsePASVresponse(char *response, struct sockaddr_in *result)
 	  return 0;
 	}
     }
-  else
+  return -1;
+}
+
+int parse_response_code(int response_code)
+{
+  // First parse the special cases
+  switch (response_code)
     {
+    case PASV_SUCCESS:
+      return PASV_SUCCESS;
+    case SERVER_ACCEPT_CONN:
+      return SERVER_ACCEPT_CONN;
+    case PWD_REJECT:
+      return PWD_REJECT;
+    case CONN_REFUSED:
+      return CONN_REFUSED;
+    }
+
+  /* We parse only the first digit of the code, the response codes change 
+     all the time and new are also added so it's best to only look at the first digit. */
+  int first_digit_in_code = response_code / 100;
+
+  switch (first_digit_in_code)
+    {
+    case 1:
+      return REQUEST_ACCEPTED_MARK;
+    case 2:
+      return REQUEST_ACCEPTED;
+    case 3:
+      return REQUEST_ACCEPTED_SPECIFY;
+    case 4:
+      return REQUEST_REJECTED_RETRY;
+    case 5:
+      return REQUEST_REJECTED_FATAL;
+    default:
+      printf("Unkown reply command!\n");
       return -1;
     }
 }
