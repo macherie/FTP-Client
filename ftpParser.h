@@ -1,7 +1,7 @@
 /* Constants used when parsing some special commands */
 #define PASV_SUCCESS 227
 #define SERVER_ACCEPT_CONN 220
-#define PWD_REJECT 257
+#define PWD_ACCEPT 257
 #define CONN_REFUSED 421
 
 /* Constants used when parsing just one digit of the code */

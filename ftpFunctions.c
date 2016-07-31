@@ -208,14 +208,50 @@ int change_directory(int command_socket, char *path)
       return -1;
     }
 
-  int response_code;
-  if ((response_code = getFTPresponse_code(buf)) == 550)
+  if ((bytes = recv(command_socket, buf, DATA_SIZE -1, 0) == -1))
+    {
+      perror("recv");
+      return -1;
+    }
+
+  if (parse_response_code(getFTPresponse_code(buf)) != REQUEST_ACCEPTED)
     {
       printf("Server rejected CWD command!\n");
       return -1;
     }
 
   return 0;
+}
+
+int print_working_directory(int command_socket)
+{
+  char message[] = "PWD\n";
+  int length = strlen(message);
+  char buf[DATA_SIZE];
+  int bytes = 0;
+
+  if (send(command_socket, message, strlen(message), 0) == -1)
+    {
+      perror("Could not send PWD command to the server!\n");
+      return -1;
+    }
+
+  if ((bytes = recv(command_socket, buf, DATA_SIZE -1, 0)) == -1)
+    {
+      perror("recv");
+      return -1;
+    }
+
+  if (parse_response_code(getFTPresponse_code(buf)) != PWD_ACCEPT)
+    {
+      printf("Server did not accept PWD command!\n");
+      return -1;
+    }
+
+  printf("%s", buf);
+
+  return 0;
+  
 }
 
 int pasv_request(int command_socket, char *pasv_response, int buffer_size)

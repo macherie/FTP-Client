@@ -16,6 +16,10 @@ int pasv_request(int command_socket, char *server_response, int buffer_size);
    the server will try to switch to that directory */
 int change_directory(int command_socket, char *path);
 
+/* Send the PWD command to the server
+   the server should send back the current working directory */
+int print_working_directory(int command_socket);
+
 /* Tries to open the data socket to the server */
 int open_data_port(int *data_socket, char *pasv_response);
 

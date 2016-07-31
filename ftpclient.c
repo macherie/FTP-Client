@@ -163,6 +163,10 @@ int main(int argc, char **argv)
 	  
 	  change_directory(command_socket, path);
 	}
+      else if (strncmp("pwd", command, 3) == 0)
+	{
+	  print_working_directory(command_socket);
+	}
     }
 
   close(command_socket);

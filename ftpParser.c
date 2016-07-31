@@ -78,7 +78,7 @@ int parsePASVresponse(char *response, struct sockaddr_in *result)
 }
 
 int parse_response_code(int response_code)
-{
+{ 
   // First parse the special cases
   switch (response_code)
     {
@@ -86,8 +86,8 @@ int parse_response_code(int response_code)
       return PASV_SUCCESS;
     case SERVER_ACCEPT_CONN:
       return SERVER_ACCEPT_CONN;
-    case PWD_REJECT:
-      return PWD_REJECT;
+    case PWD_ACCEPT:
+      return PWD_ACCEPT;
     case CONN_REFUSED:
       return CONN_REFUSED;
     }
